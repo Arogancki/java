@@ -38,7 +38,6 @@ public class DAO {
 					"SELECT * FROM `java`.`workers`"
 			);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
 			System.out.println("Nie uda³o siê po³¹czyæ z baz¹ danych");
 		}
 	}

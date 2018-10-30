@@ -39,7 +39,7 @@ public class Controller {
 	public static void Menu()
 	{
 		View.loadSettings();
-		Model.runSocketServer();
+		Model.setup();
 		while (true)
 		{
 			View.printMenu();

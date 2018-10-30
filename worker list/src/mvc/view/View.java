@@ -139,7 +139,13 @@ public class View {
 		String address=Controller.getChoice();
 		System.out.print("Podaj numer portu serwera\t:\t");
 		int port = Controller.getInt();
-		int newWorkers = Model.mergeAndResolveDuplicates(Model.ReceiveFromSocket(address, port));
+		System.out.print("Podaj login\t:\t");
+		String username=Controller.getChoice();
+		System.out.print("Podaj haslo\t:\t");
+		String password=Controller.getChoice();
+		int newWorkers = Model.mergeAndResolveDuplicates(
+			Model.ReceiveFromSocket(address, port, username, password)
+		);
 		System.out.println("\nPobrano " + newWorkers + " nowych pracowników z bazy danych");
 	}
 	public static void Serialize()
