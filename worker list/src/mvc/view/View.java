@@ -18,6 +18,7 @@ public class View {
 		System.out.println("\t2.Dodaj pracownika");
 		System.out.println("\t3.Usun pracownika");
 		System.out.println("\t4.Kopia zapasowa");
+		System.out.println("\t5.Pobierz dane z sieci");
 		System.out.print("\nWybor>");
 	}
 	public static void printWorkers()
@@ -132,6 +133,15 @@ public class View {
 			System.out.println("Bledne dane");
 		}
 	}
+	public static void Network() {
+		System.out.println("5.Pobierz dane z sieci:\n");
+		System.out.print("Podaj adres serwera\t:\t");
+		String address=Controller.getChoice();
+		System.out.print("Podaj numer portu serwera\t:\t");
+		int port = Controller.getInt();
+		int newWorkers = Model.mergeAndResolveDuplicates(Model.ReceiveFromSocket(address, port));
+		System.out.println("\nPobrano " + newWorkers + " nowych pracowników z bazy danych");
+	}
 	public static void Serialize()
 	{
 		System.out.println("4.Kopia zapasowa:\n");
@@ -177,25 +187,8 @@ public class View {
 			String where=Controller.getChoice(options15);
 			if (where.compareToIgnoreCase("B")==0){
 				try {
-					int before = Model.persons.size();
-					int zmienieni = 0;
-					TreeMap<String, Worker> duplicates = Model.mergeWorkers(Model.dao.getWorkers());
-					for(Map.Entry<String, Worker> entry : duplicates.entrySet()) {
-						Worker newWorker = entry.getValue();
-						String newWorkerPesel = newWorker.getPesel();
-						System.out.println("\nZnaleziono duplikaty. Czy nadpisaæ pracownika:\n");
-						System.out.println(Model.persons.get(newWorkerPesel));
-						System.out.println("\n"+"pracownikiem:" +"\n");
-						System.out.println(newWorker);
-						System.out.println("[T]ak, [N]ie");
-						String[] options2={"T","N"};
-						if (Controller.getChoice(options2).compareToIgnoreCase("T")==0){
-							Model.persons.remove(newWorkerPesel);
-							Model.persons.put(newWorkerPesel, newWorker);
-							zmienieni++;
-						}
-					}
-					System.out.println("\nPobrano " + (Model.persons.size()-before+zmienieni) + " pracowników z bazy danych");
+					int newWorkers = Model.mergeAndResolveDuplicates(Model.dao.getWorkers());
+					System.out.println("\nPobrano " + newWorkers + " nowych pracowników z bazy danych");
 				} catch (SQLException e) {
 					System.out.println("\nBlad bazy danych - nie udalo sie pobrac");
 				}
@@ -214,5 +207,9 @@ public class View {
 				}
 			}
 		}
+	}
+	public static void loadSettings() {
+		System.out.print("Podaj port dla po³¹czenia tcp/ip\t:\t");
+		Model.socketPort = Controller.getInt();
 	}
 }

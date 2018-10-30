@@ -7,6 +7,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.*;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedOutputStream;
@@ -16,10 +19,55 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.net.ServerSocketFactory;
+
+import mvc.controller.Controller;
 import mvc.model.Worker.*;
 
 public class Model {
 	public static DAO dao = new DAO();
+	public static Thread socketDemonThread=null;
+	public static int socketPort;
+	public static Thread runSocketServer() {
+		if (socketDemonThread!=null)
+			return socketDemonThread;
+		socketDemonThread = new Thread(() -> {
+			ServerSocket serverSocket=null;
+			Socket socket = null;
+			List<Thread> threads = new ArrayList<Thread>();
+		    try {
+		    	serverSocket = new ServerSocket(socketPort);
+		    	while (true) {
+		    		Thread t=null;
+		    		try {
+		    			 t=new SendViaSocket(serverSocket.accept());
+		            } catch (IOException e) {
+		                System.out.println("Demon server error during client handling " + e);
+		            }
+		    		t.start();
+		    		threads.add(t);
+		    	 }
+		    	 
+		    } catch (Exception e) {
+		    	System.out.println("Demon server error " + e);
+		    }
+		    finally {
+		    	try {
+		    		if (socket!=null)
+		    			socket.close();
+				} catch (IOException e) {}
+		    	for (Thread t : threads) {
+		    		t.interrupt();
+		    	}
+		    }
+		});
+		socketDemonThread.start();
+		return socketDemonThread;
+	}
+	@Override
+	public void finalize() {
+		socketDemonThread.interrupt();
+	}
 	public static TreeMap<String, Worker> persons = new TreeMap<String, Worker>();
 	public static Boolean Compress(String filePath, char compresion)
 	{
@@ -53,7 +101,6 @@ public class Model {
 			catch (IOException e) {return output;}
 		}	
 	}
-	
 	public static Boolean Decompress(String filePath)
 	{
 		Boolean output=false;
@@ -104,5 +151,54 @@ public class Model {
 			}
 		}
 		return duplicates;
+	}
+	public static int mergeAndResolveDuplicates(TreeMap<String, Worker> newWorkers) {
+		int before = Model.persons.size();
+		int zmienieni = 0;
+		TreeMap<String, Worker> duplicates = Model.mergeWorkers(newWorkers);
+		for(Map.Entry<String, Worker> entry : duplicates.entrySet()) {
+			Worker newWorker = entry.getValue();
+			String newWorkerPesel = newWorker.getPesel();
+			System.out.println("\nZnaleziono duplikaty. Czy nadpisaæ pracownika:\n");
+			System.out.println(Model.persons.get(newWorkerPesel));
+			System.out.println("\n"+"pracownikiem:" +"\n");
+			System.out.println(newWorker);
+			System.out.println("[T]ak, [N]ie");
+			String[] options2={"T","N"};
+			if (Controller.getChoice(options2).compareToIgnoreCase("T")==0){
+				Model.persons.remove(newWorkerPesel);
+				Model.persons.put(newWorkerPesel, newWorker);
+				zmienieni++;
+			}
+		}
+		return (Model.persons.size()-before+zmienieni);
+	}
+	public static TreeMap<String, Worker> ReceiveFromSocket(String address, int port) {
+		TreeMap<String, Worker> data = null;
+		Socket socket = null;
+		ObjectInputStream ois = null;
+		try {
+			System.out.print("\nUstanawianie po³¹czenia...");
+			socket = new Socket(address, port);
+			System.out.print(" Sukces!");
+			socket.setSoTimeout(10000);
+			ois = new ObjectInputStream(socket.getInputStream());
+			System.out.print("\nPobieranie...");
+			data = (TreeMap<String, Worker>) ois.readObject();
+			System.out.print(" Sukces!\n");
+		} catch (IOException | ClassNotFoundException e) {
+			System.out.println("\nNie uda³o siê pobraæ danych z serwera tcp");
+		}
+		finally {
+			if (socket!=null)
+				try {
+					socket.close();
+				} catch (IOException e) {}
+			if (ois!=null)
+				try {
+					ois.close();
+				} catch (IOException e) {}
+		}
+		return data!=null ? data : new	TreeMap<String, Worker>();
 	}
 }
