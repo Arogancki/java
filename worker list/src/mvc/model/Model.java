@@ -1,3 +1,7 @@
+//ZTPJ I2 14 LAB07
+//Artur Ziemba
+//za32917@zut.edu.pl
+
 package mvc.model;
 
 import java.io.BufferedOutputStream;
@@ -49,7 +53,7 @@ public class Model {
 	public static DAO dao = new DAO();
 	public static Thread socketDemonThread = null;
 	public static int socketPort;
-	public static int webServicePort = 809;
+	public static int webServicePort = 8095;
 	public static RMIServer rmiServer = null;
 	public static Publisher webService = null;
 	
@@ -59,8 +63,7 @@ public class Model {
 		runSocketServer();
 		webService = new Publisher(Model.webServicePort);
 		rmiServer = new RMIServer();
-		rmiServer.start();	
-		new webClient();
+		rmiServer.start();
 	}
 
 	public static Thread runSocketServer() {

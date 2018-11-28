@@ -1,3 +1,7 @@
+//ZTPJ I2 14 LAB07
+//Artur Ziemba
+//za32917@zut.edu.pl
+
 package mvc.view;
 import java.util.Map;
 import java.util.TreeMap;
@@ -158,15 +162,18 @@ public class View {
 		String username=Controller.getChoice();
 		System.out.print("Podaj haslo\t:\t");
 		String password=Controller.getChoice();
-		System.out.print("Podaj adres serwera\t:\t");
-		String address=Controller.getChoice();
-		System.out.print("Podaj numer portu serwera\t:\t");
-		int port = Controller.getInt();
-		int newWorkers = Model.mergeAndResolveDuplicates(
-			source.compareToIgnoreCase("peer")==0 ?
-			Model.ReceiveFromSocket(address, port, username, password, auth) :
-			Model.ReceiveFromWebService(username, password, auth)
-		);
+		TreeMap<String,Worker> out=null;
+		if (source.compareToIgnoreCase("peer")==0) {
+			System.out.print("Podaj adres serwera\t:\t");
+			String address=Controller.getChoice();
+			System.out.print("Podaj numer portu serwera\t:\t");
+			int port = Controller.getInt();
+			out=Model.ReceiveFromSocket(address, port, username, password, auth);
+		}
+		else {
+			out= Model.ReceiveFromWebService(username, password, auth);
+		}
+		int newWorkers = Model.mergeAndResolveDuplicates(out);
 		System.out.println("\nPobrano " + newWorkers + " nowych pracowników z bazy danych");
 	}
 	public static void Serialize()

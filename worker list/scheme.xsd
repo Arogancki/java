@@ -1,48 +1,61 @@
-<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:element name="workers">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="personsTree">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="entry" maxOccurs="unbounded" minOccurs="0">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element type="xs:long" name="key"/>
-                    <xs:element name="value" type="dyrektor">
-					  <xs:complexType>
-                        <xs:sequence>
-                          <xs:element type="xs:long" name="pesel"/>
-                          <xs:element type="xs:string" name="name"/>
-                          <xs:element type="xs:string" name="lastName"/>
-                          <xs:element type="xs:short" name="income"/>
-                          <xs:element type="xs:int" name="phone"/>
-                          <xs:element type="xs:short" name="limit"/>
-                          <xs:element type="xs:short" name="addictonal" />
-                          <xs:element type="xs:string" name="card" />
-                        </xs:sequence>
-                      </xs:complexType>
-                    </xs:element>
-					<xs:element name="value" type="handlowiec">
-					  <xs:complexType>
-                        <xs:sequence>
-                          <xs:element type="xs:long" name="pesel"/>
-                          <xs:element type="xs:string" name="name"/>
-                          <xs:element type="xs:string" name="lastName"/>
-                          <xs:element type="xs:short" name="income"/>
-                          <xs:element type="xs:int" name="phone"/>
-                          <xs:element type="xs:short" name="limit"/>
-                          <xs:element type="xs:byte" name="provision" />
-                        </xs:sequence>
-                      </xs:complexType>
-                    </xs:element>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema version="1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="Dyrektor" type="dyrektor"/>
+
+  <xs:element name="Handlowiec" type="handlowiec"/>
+
+  <xs:element name="workers" type="personsTree"/>
+
+  <xs:complexType name="personsTree">
+    <xs:sequence>
+      <xs:element name="personsTree">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entry" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="key" minOccurs="0" type="xs:string"/>
+                  <xs:element name="value" minOccurs="0" type="worker"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="worker" abstract="true">
+    <xs:sequence>
+      <xs:element name="pesel" type="xs:string" minOccurs="0"/>
+      <xs:element name="name" type="xs:string" minOccurs="0"/>
+      <xs:element name="lastName" type="xs:string" minOccurs="0"/>
+      <xs:element name="income" type="xs:decimal" minOccurs="0"/>
+      <xs:element name="phone" type="xs:int"/>
+      <xs:element name="limit" type="xs:decimal" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dyrektor">
+    <xs:complexContent>
+      <xs:extension base="worker">
+        <xs:sequence>
+          <xs:element name="addictonal" type="xs:decimal" minOccurs="0"/>
+          <xs:element name="card" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="handlowiec">
+    <xs:complexContent>
+      <xs:extension base="worker">
+        <xs:sequence>
+          <xs:element name="provision" type="xs:int"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
 </xs:schema>
+

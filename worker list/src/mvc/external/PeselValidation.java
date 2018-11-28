@@ -1,3 +1,7 @@
+//ZTPJ I2 14 LAB07
+//Artur Ziemba
+//za32917@zut.edu.pl
+
 package mvc.external;
 public class PeselValidation {
 		static private Boolean wrong=false;
