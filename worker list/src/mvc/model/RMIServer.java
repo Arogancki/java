@@ -18,6 +18,7 @@ public class RMIServer extends Bouncer {
     try {  
     	bouncer = new Bouncer(); 
     	stub = (Authenticate) UnicastRemoteObject.exportObject(bouncer, 0); 
+    	LocateRegistry.createRegistry(1099);
     	registry = LocateRegistry.getRegistry(); 
     	registry.bind("Authenticate", stub);
     } catch (AlreadyBoundException e) {

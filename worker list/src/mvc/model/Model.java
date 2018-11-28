@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,6 +16,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedOutputStream;
 import java.util.zip.GZIPInputStream;
@@ -23,21 +25,42 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.jws.WebMethod;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
 import javax.net.ServerSocketFactory;
+import javax.xml.XMLConstants;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 
 import mvc.controller.Controller;
 import mvc.model.Worker.*;
+import mvc.model.webService.*;
 
 public class Model {
+	
+	public static TreeMap<String, Worker> persons = new TreeMap<String, Worker>();
 	public static DAO dao = new DAO();
 	public static Thread socketDemonThread = null;
 	public static int socketPort;
+	public static int webServicePort = 809;
 	public static RMIServer rmiServer = null;
+	public static Publisher webService = null;
+	
+	private static String xmlSchemeFile = "./scheme.xsd";
 
 	public static void setup() {
 		runSocketServer();
+		webService = new Publisher(Model.webServicePort);
 		rmiServer = new RMIServer();
-		rmiServer.start();
+		rmiServer.start();	
+		new webClient();
 	}
 
 	public static Thread runSocketServer() {
@@ -52,6 +75,7 @@ public class Model {
 				while (true) {
 					Thread t = null;
 					try {
+						// zaleznie od portu tworzyc odpwoiednia klase dla websericu albo czystkoc socket
 						t = new SendViaSocket(serverSocket.accept());
 					} catch (IOException e) {
 						System.out.println("Demon server error during client handling " + e);
@@ -81,8 +105,6 @@ public class Model {
 	public void finalize() {
 		socketDemonThread.interrupt();
 	}
-
-	public static TreeMap<String, Worker> persons = new TreeMap<String, Worker>();
 
 	public static Boolean Compress(String filePath, char compresion) {
 		Boolean output = false;
@@ -144,6 +166,42 @@ public class Model {
 			}
 		}
 	}
+	
+	public static Boolean saveToXml(String file) {
+		try {
+			PersonsTree temp = new PersonsTree();
+			temp.setPersons(Model.persons);
+			JAXBContext jaxbContext = JAXBContext.newInstance(PersonsTree.class);
+	    	Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+	    	jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+	    	jaxbMarshaller.marshal(temp, new File(file));
+	    	return true;
+		}
+		catch (Exception e) {
+			System.out.println("ERROR "+e.getMessage());
+			return false;
+		}
+	}
+	
+	public static int readFromXml(String file) {
+		try {
+			JAXBContext jaxbContext = JAXBContext.newInstance(PersonsTree.class);
+		    Unmarshaller jaxbUnmarshaller;
+			jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+			// Schema schema = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+			// 		.newSchema(new File(Model.xmlSchemeFile));
+			// jaxbUnmarshaller.setSchema(schema);
+			PersonsTree personsTree = (PersonsTree) jaxbUnmarshaller.unmarshal(new File(file));
+			TreeMap<String, Worker> persons = new TreeMap<String, Worker>();
+			for(Entry<String, Worker> entry : personsTree.getPersonsTree().entrySet()){
+				persons.put(entry.getKey(), entry.getValue());
+			}
+			return Model.mergeAndResolveDuplicates(persons);
+	    } catch (Exception e) {
+	    	System.out.println("ERROR "+e.getMessage());
+			return 0;
+		}
+	}
 
 	public static TreeMap<String, Worker> mergeWorkers(TreeMap<String, Worker> workers) {
 		TreeMap<String, Worker> duplicates = new TreeMap<String, Worker>();
@@ -183,23 +241,65 @@ public class Model {
 		return (Model.persons.size() - before + zmienieni);
 	}
 
-	public static TreeMap<String, Worker> ReceiveFromSocket(String address, int port, String login, String password) {
+	public static TreeMap<String, Worker> ReceiveFromWebService(String login, String password, String auth) {
 		TreeMap<String, Worker> data = null;
+		System.out.print("\nAutentykacja...");
 		String key = "";
 		try {
-			System.out.print("\nAutentykacja...");
-			Registry registry = LocateRegistry.getRegistry(null);
-			Authenticate stub = (Authenticate) registry.lookup("Authenticate");
-			key = stub.authenticate(login, password);
-			if (key.compareTo("") == 0) {
-				System.out.print(" Nieprawid³owe dane\n");
+			key = auth(login, password, auth);
+			if (key.compareTo("0")==0) {
+				System.out.print("Nieprawid³owe dane\n");
 				return new TreeMap<String, Worker>();
 			}
-			System.out.print(" Sukces!\n");
 		} catch (RemoteException | NotBoundException e1) {
 			System.out.println("\nNie uda³o siê po³¹czyæ z serwisem autoryzuj¹cym");
 			return new TreeMap<String, Worker>();
 		}
+		System.out.print(" Sukces!\n");
+		System.out.print("\nPobieranie danych...");
+		String outData = webClient.request(key);
+		if (outData.compareToIgnoreCase("1")==0) {
+			System.out.print(" Token wygasl!\n");
+			return new TreeMap<String, Worker>();
+		}
+		if (outData.compareToIgnoreCase("2")==0) {
+			System.out.print("Blad serwera!\n");
+			return new TreeMap<String, Worker>();
+		}
+		try {
+			JAXBContext jaxbContext = JAXBContext.newInstance(PersonsTree.class);
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			StringReader reader = new StringReader(outData);
+			PersonsTree personsTree = (PersonsTree) unmarshaller.unmarshal(reader);
+			TreeMap<String, Worker> persons = new TreeMap<String, Worker>();
+			for	(Entry<String, Worker> entry : personsTree.getPersonsTree().entrySet()){
+				persons.put(entry.getKey(), entry.getValue());
+			}
+			return persons;
+		}
+		catch (Exception e) {
+			System.out.print("Blad danych!\n");
+			return new TreeMap<String, Worker>();
+		}
+		
+	}
+	public static TreeMap<String, Worker> ReceiveFromSocket(String address, int port, String login, String password, String auth) {
+		TreeMap<String, Worker> data = null;
+		System.out.print("\nAutentykacja...");
+		String key = "";
+		try {
+			key = auth(login, password, auth);
+			if (key.compareTo("0")==0) {
+				System.out.print("Nieprawid³owe dane\n");
+				return new TreeMap<String, Worker>();
+			}
+		} catch (RemoteException | NotBoundException e1) {
+			System.out.println("\nNie uda³o siê po³¹czyæ z serwisem autoryzuj¹cym");
+			return new TreeMap<String, Worker>();
+		}
+		System.out.print(" Sukces!\n");
+		
+		 // zrobic tu 2 funkcje zaleznie od sposobu kotrre beda zwracc dane
 		Socket socket = null;
 		ObjectInputStream ois = null;
 		ObjectOutputStream oos = null;
@@ -241,5 +341,12 @@ public class Model {
 				}
 		}
 		return data != null ? data : new TreeMap<String, Worker>();
+	}
+
+	private static String auth(String login, String password, String type) throws RemoteException, NotBoundException {
+		Registry registry = LocateRegistry.getRegistry(null);
+		Authenticate stub = (Authenticate) registry.lookup("Authenticate");
+		String key = stub.authenticate(login, password, type);
+		return key.compareTo("") == 0 ? "0" : key;
 	}
 }

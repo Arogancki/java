@@ -2,14 +2,34 @@ package mvc.model.Worker;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
+
+@XmlSeeAlso({Dyrektor.class, Handlowiec.class})
+@XmlType
+@XmlAccessorType(XmlAccessType.FIELD)
 public abstract class Worker implements Serializable {
 	private static final long serialVersionUID = 1L;
+	
 	private String pesel;
 	private String name;
 	private String lastName;
 	private BigDecimal income;
 	private int phone;
 	protected BigDecimal limit;
+	Worker() {
+		pesel="0";
+		name="";
+		lastName="";
+		income=new BigDecimal(0);
+		phone=0;
+		limit=new BigDecimal(0);
+	}
+	
 	Worker(String _pesel,String Name, String LastName, BigDecimal Income, BigDecimal Limit,int Phone){
 		pesel=_pesel;
 		name=Name;

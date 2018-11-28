@@ -1,10 +1,21 @@
 package mvc.model.Worker;
 import java.math.BigDecimal;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement(name = "Dyrektor")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Dyrektor extends Worker {
 	private static final long serialVersionUID = 1L;
 	private BigDecimal addictonal;
 	private String card;
+	public Dyrektor() {
+		super();
+		card="";
+		addictonal=new BigDecimal(0);
+	}
 	public Dyrektor(String _pesel,String Name, String LastName, BigDecimal Income, BigDecimal Limit,int Phone, String Card, BigDecimal Addictonal)
 	{
 		super(_pesel, Name, LastName, Income, Limit, Phone);

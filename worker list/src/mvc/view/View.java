@@ -135,16 +135,37 @@ public class View {
 	}
 	public static void Network() {
 		System.out.println("5.Pobierz dane z sieci:\n");
-		System.out.print("Podaj adres serwera\t:\t");
-		String address=Controller.getChoice();
-		System.out.print("Podaj numer portu serwera\t:\t");
-		int port = Controller.getInt();
+		System.out.print("Zrodlo [W]ebService/[P]eer\t:\t");
+		String[] optionsZ={"W","P"};
+		String source=Controller.getChoice(optionsZ);
+		if (source.compareToIgnoreCase("W")==0) {
+			source = "web";
+		}
+		else {
+			source = "peer";
+		};
+		System.out.print("Autentykacja [S]erwer wi.zut/[R]mi\t:\t");
+		String[] options={"R","S"};
+		String type=Controller.getChoice(options);
+		String auth="";
+		if (type.compareToIgnoreCase("R")==0) {
+			auth = "rmi";
+		}
+		else {
+			auth = "jndi";
+		};
 		System.out.print("Podaj login\t:\t");
 		String username=Controller.getChoice();
 		System.out.print("Podaj haslo\t:\t");
 		String password=Controller.getChoice();
+		System.out.print("Podaj adres serwera\t:\t");
+		String address=Controller.getChoice();
+		System.out.print("Podaj numer portu serwera\t:\t");
+		int port = Controller.getInt();
 		int newWorkers = Model.mergeAndResolveDuplicates(
-			Model.ReceiveFromSocket(address, port, username, password)
+			source.compareToIgnoreCase("peer")==0 ?
+			Model.ReceiveFromSocket(address, port, username, password, auth) :
+			Model.ReceiveFromWebService(username, password, auth)
 		);
 		System.out.println("\nPobrano " + newWorkers + " nowych pracowników z bazy danych");
 	}
@@ -170,8 +191,8 @@ public class View {
 				}
 			}
 			else {
-				System.out.print("Kompresja [G]zip/[Z]zip\t:\t");
-				String[] options2={"G","Z"};
+				System.out.print("Typ [X]ml/[G]zip/[Z]zip\t:\t");
+				String[] options2={"G","Z","X"};
 				String compresion=Controller.getChoice(options2);
 				System.out.print("Nazwa pliku\t:\t");
 				String filePath = Controller.getChoice();
@@ -181,7 +202,11 @@ public class View {
 				String[] options3={"","q"};
 				if (Controller.getChoice(options3).compareToIgnoreCase("")==0)
 				{
-					if (!Model.Compress(filePath, compresion.charAt(0)))
+					if (compresion.compareToIgnoreCase("X")==0) {
+						if (!Model.saveToXml(filePath))
+							System.out.println("Blad pliku");
+					}
+					else if (!Model.Compress(filePath, compresion.charAt(0)))
 						System.out.println("Blad pliku");
 				}	
 			}
@@ -208,8 +233,14 @@ public class View {
 				String[] options3={"","q"};
 				if (Controller.getChoice(options3).compareToIgnoreCase("")==0)
 				{
-					if (!Model.Decompress(filePath))
+					String[] temp = filePath.split("\\.");
+					if (temp[temp.length - 1].charAt(0) == 'X' 
+							|| temp[temp.length - 1].charAt(0) == 'x') {
+						System.out.println("Wczytano " + Model.readFromXml(filePath) + " nowych rekordów!");
+					}
+					else if (!Model.Decompress(filePath)) {
 						System.out.println("Blad pliku");
+					}
 				}
 			}
 		}
@@ -217,5 +248,6 @@ public class View {
 	public static void loadSettings() {
 		System.out.print("Podaj port dla po³¹czenia tcp/ip\t:\t");
 		Model.socketPort = Controller.getInt();
+		
 	}
 }

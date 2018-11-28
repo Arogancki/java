@@ -21,11 +21,12 @@ public class SendViaSocket extends Thread {
     	ObjectOutputStream oos = null;
     	ObjectInputStream ois = null;
     	try {
+    		boolean authencited = false;
+    		// funckja odbierz token dla obu klas
     		ois = new ObjectInputStream(socket.getInputStream());
 			String token = (String) ois.readObject();
-			boolean authencited = false;
 			try {
-				Registry registry = LocateRegistry.getRegistry(null);
+				Registry registry = LocateRegistry.getRegistry(1099);
 				Authenticate stub = (Authenticate) registry.lookup("Authenticate");
 				authencited = stub.authenticateToken(token);
 			} catch (RemoteException | NotBoundException e1) {
@@ -34,14 +35,18 @@ public class SendViaSocket extends Thread {
 			oos= new ObjectOutputStream(socket.getOutputStream());
 			oos.writeObject(authencited);
 			oos.flush();
+			//koniec
 			if (authencited) {
+				// funkcja wysli dane
 				oos.writeObject(Model.persons);
 				oos.flush();
+				// koniec
 			}
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
     	finally {
+    		// funkcja clear
     		if (oos!=null)
 				try {
 					oos.close();
@@ -56,6 +61,7 @@ public class SendViaSocket extends Thread {
 				socket.close();
 			} catch (IOException e) {
 			}
+    		// koniec
     	}
     }
 }
